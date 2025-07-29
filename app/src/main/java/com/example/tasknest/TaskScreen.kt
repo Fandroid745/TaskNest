@@ -81,7 +81,7 @@ fun TaskScreen() {
             }
         }
 
-        // Floating Action Button
+
         FloatingActionButton(
             onClick = { showAddDialog = true },
             modifier = Modifier
@@ -97,7 +97,7 @@ fun TaskScreen() {
         }
     }
 
-    // Add Task Dialog
+
     if (showAddDialog) {
         AddTaskDialog(
             onDismiss = { showAddDialog = false },
