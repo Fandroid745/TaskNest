@@ -42,10 +42,11 @@ fun TaskScreen() {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(40.dp)
         ) {
             // Header
             Text(
+
                 text = "TaskNest",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
