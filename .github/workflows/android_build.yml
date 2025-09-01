@@ -5,7 +5,11 @@ name: Android CI
 on:
   push:
     branches: [ "main" ]
-    tags: [ "v*" ] # Added to trigger on tags
+    tags: [ "v*" ]
+
+# This block grants the necessary permissions to the GITHUB_TOKEN
+permissions:
+  contents: write # This is the crucial line you need to add
 
 # A workflow run is made up of one or more jobs
 jobs:
