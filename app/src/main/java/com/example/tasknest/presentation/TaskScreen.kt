@@ -1,16 +1,15 @@
 package com.example.tasknest
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,6 +21,8 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,6 +34,7 @@ fun TaskScreen() {
 
     val tasks by viewModel.tasks.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
+    var taskToEdit by remember { mutableStateOf<ListItems?>(null) } // State to hold the task being edited
 
     Box(
         modifier = Modifier
@@ -46,7 +48,6 @@ fun TaskScreen() {
         ) {
             // Header
             Text(
-
                 text = "TaskNest",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
@@ -71,17 +72,19 @@ fun TaskScreen() {
                         TaskItem(
                             task = task,
                             onToggleComplete = { updatedTask ->
-                                viewModel.addTask(updatedTask.copy(completed = !updatedTask.completed))
+                                viewModel.updateTask(updatedTask.copy(completed = !updatedTask.completed))
                             },
                             onDelete = { taskToDelete ->
                                 viewModel.deleteTask(taskToDelete)
+                            },
+                            onEdit = { taskToUpdate ->
+                                taskToEdit = taskToUpdate
                             }
                         )
                     }
                 }
             }
         }
-
 
         FloatingActionButton(
             onClick = { showAddDialog = true },
@@ -98,7 +101,6 @@ fun TaskScreen() {
         }
     }
 
-
     if (showAddDialog) {
         AddTaskDialog(
             onDismiss = { showAddDialog = false },
@@ -111,6 +113,18 @@ fun TaskScreen() {
                     )
                 )
                 showAddDialog = false
+            }
+        )
+    }
+
+    // Show the EditTaskDialog when taskToEdit is not null
+    taskToEdit?.let { task ->
+        EditTaskDialog(
+            taskToEdit = task,
+            onDismiss = { taskToEdit = null },
+            onTaskUpdate = { updatedTask ->
+                viewModel.updateTask(updatedTask)
+                taskToEdit = null
             }
         )
     }
@@ -172,12 +186,13 @@ fun StatItem(title: String, count: Int, color: Color) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun TaskItem(
     task: ListItems,
     onToggleComplete: (ListItems) -> Unit,
-    onDelete: (ListItems) -> Unit
+    onDelete: (ListItems) -> Unit,
+    onEdit: (ListItems) -> Unit
 ) {
     val urgencyColor = when (task.urgency) {
         "High" -> Color(0xFFF44336)
@@ -187,7 +202,12 @@ fun TaskItem(
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = { onEdit(task) },
+                onLongClick = { onDelete(task) }
+            ),
         colors = CardDefaults.cardColors(
             containerColor = if (task.completed)
                 MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
@@ -244,17 +264,6 @@ fun TaskItem(
                         fontWeight = FontWeight.Medium
                     )
                 }
-            }
-
-            // Delete Button
-            IconButton(
-                onClick = { onDelete(task) }
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete Task",
-                    tint = Color(0xFFF44336)
-                )
             }
         }
     }
@@ -319,7 +328,6 @@ fun AddTaskDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Urgency Dropdown
                 ExposedDropdownMenuBox(
                     expanded = expanded,
                     onExpandedChange = { expanded = !expanded }
@@ -362,6 +370,95 @@ fun AddTaskDialog(
                 enabled = taskName.isNotBlank()
             ) {
                 Text("Add Task")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditTaskDialog(
+    taskToEdit: ListItems,
+    onDismiss: () -> Unit,
+    onTaskUpdate: (ListItems) -> Unit
+) {
+    var taskName by remember { mutableStateOf(taskToEdit.name) }
+    var selectedUrgency by remember { mutableStateOf(taskToEdit.urgency) }
+    var expanded by remember { mutableStateOf(false) }
+    val urgencyOptions = listOf("Low", "Medium", "High")
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Edit Task",
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = taskName,
+                    onValueChange = { taskName = it },
+                    label = { Text("Task Name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded }
+                ) {
+                    OutlinedTextField(
+                        value = selectedUrgency,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Priority Level") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor()
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        urgencyOptions.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option) },
+                                onClick = {
+                                    selectedUrgency = option
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (taskName.isNotBlank()) {
+                        onTaskUpdate(
+                            taskToEdit.copy(
+                                name = taskName.trim(),
+                                urgency = selectedUrgency
+                            )
+                        )
+                    }
+                },
+                enabled = taskName.isNotBlank()
+            ) {
+                Text("Save")
             }
         },
         dismissButton = {

@@ -20,9 +20,16 @@ class TaskViewModel(private val
     }
 
 
-    fun deleteTask(task:ListItems){
-        viewModelScope.launch{
+    fun deleteTask(task:ListItems) {
+        viewModelScope.launch {
             repository.deleteTask(task)
         }
     }
-}
+
+
+        fun updateTask(task:ListItems){
+            viewModelScope.launch{
+                repository.updateTask(task)
+            }
+        }
+    }
