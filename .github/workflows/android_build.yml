@@ -1,0 +1,41 @@
+# Name of the workflow
+name: Android CI
+
+# Controls when the workflow will run
+on:
+  push:
+    branches: [ "main" ]
+
+# A workflow run is made up of one or more jobs
+jobs:
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # The steps represent a sequence of tasks that will be executed
+    steps:
+      # Checks-out your repository
+      - uses: actions/checkout@v4
+
+      # Sets up the Java Development Kit (JDK)
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      # Grants execute permission for the Gradle wrapper
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # Builds the release APK
+      - name: Build release APK
+        run: ./gradlew assembleRelease
+
+      # Uploads the generated APK as a release artifact
+      - name: Upload APK as a release
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: app/release/app.release.apk
