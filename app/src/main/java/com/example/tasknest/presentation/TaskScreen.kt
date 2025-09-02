@@ -35,6 +35,8 @@ fun TaskScreen() {
     val tasks by viewModel.tasks.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var taskToEdit by remember { mutableStateOf<ListItems?>(null) } // State to hold the task being edited
+    var taskToDelete by remember { mutableStateOf<ListItems?>(null) } // State to hold the task to be deleted
+    var showDeleteDialog by remember { mutableStateOf(false) } // State for delete confirmation dialog
 
     Box(
         modifier = Modifier
@@ -74,8 +76,9 @@ fun TaskScreen() {
                             onToggleComplete = { updatedTask ->
                                 viewModel.updateTask(updatedTask.copy(completed = !updatedTask.completed))
                             },
-                            onDelete = { taskToDelete ->
-                                viewModel.deleteTask(taskToDelete)
+                            onDelete = { taskToDeleteParam ->
+                                taskToDelete = taskToDeleteParam
+                                showDeleteDialog = true
                             },
                             onEdit = { taskToUpdate ->
                                 taskToEdit = taskToUpdate
@@ -125,6 +128,37 @@ fun TaskScreen() {
             onTaskUpdate = { updatedTask ->
                 viewModel.updateTask(updatedTask)
                 taskToEdit = null
+            }
+        )
+    }
+
+    // Show the DeleteTaskDialog when showDeleteDialog is true
+    if (showDeleteDialog && taskToDelete != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showDeleteDialog = false
+                taskToDelete = null
+            },
+            title = { Text("Delete Task") },
+            text = { Text("Are you sure you want to delete \"${taskToDelete!!.name}\"?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteTask(taskToDelete!!)
+                        taskToDelete = null
+                        showDeleteDialog = false
+                    }
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showDeleteDialog = false
+                    taskToDelete = null
+                }) {
+                    Text("Cancel")
+                }
             }
         )
     }
@@ -204,10 +238,7 @@ fun TaskItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .combinedClickable(
-                onClick = { onEdit(task) },
-                onLongClick = { onDelete(task) }
-            ),
+            .clickable { onEdit(task) },
         colors = CardDefaults.cardColors(
             containerColor = if (task.completed)
                 MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
@@ -233,7 +264,7 @@ fun TaskItem(
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Task Content
+
             Column(
                 modifier = Modifier.weight(1f)
             ) {
@@ -250,7 +281,7 @@ fun TaskItem(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Urgency Badge
+
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
@@ -264,6 +295,18 @@ fun TaskItem(
                         fontWeight = FontWeight.Medium
                     )
                 }
+            }
+
+
+            IconButton(
+                onClick = { onDelete(task) },
+                modifier = Modifier.padding(start = 8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete Task",
+                    tint = Color.Red
+                )
             }
         }
     }
